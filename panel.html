@@ -86,13 +86,31 @@ new Chart(document.getElementById('cDisp'), {type: 'scatter',
     scales: {x: {title: {display: true, text: 'Elecciones positivas'}, ticks: {stepSize: 1}},
              y: {title: {display: true, text: 'Elecciones negativas'}, ticks: {stepSize: 1}}}}});
 
-// Clima
+// Clima (etiquetas cortas en dos líneas para que no se recorten; el texto completo va en la pista al tocar)
+const partir = (t) => {
+  const p = t.split(' ');
+  const lineas = [''];
+  for (const w of p) {
+    if ((lineas[lineas.length - 1] + ' ' + w).trim().length > 26 && lineas.length < 2) lineas.push(w);
+    else lineas[lineas.length - 1] = (lineas[lineas.length - 1] + ' ' + w).trim();
+  }
+  if (lineas.length === 2) {
+    const resto = p.slice(lineas.join(' ').split(' ').length).join(' ');
+    if (resto) lineas[1] = lineas[1] + '…';
+  }
+  return lineas;
+};
 new Chart(document.getElementById('cClima'), {type: 'bar',
-  data: {labels: d.clima.map(c => c.etiqueta),
+  data: {labels: d.clima.map(c => partir(c.etiqueta)),
     datasets: [{data: d.clima.map(c => c.favorable),
       backgroundColor: d.clima.map(c => c.clave === 'divisiones' ? '#D64545' : '#00A8FF')}]},
-  options: {indexAxis: 'y', plugins: {legend: {display: false}},
-    scales: {x: {min: 0, max: 100, title: {display: true, text: '% favorable'}}}}});
+  options: {indexAxis: 'y',
+    plugins: {legend: {display: false},
+      tooltip: {callbacks: {
+        title: (items) => d.clima[items[0].dataIndex].etiqueta,
+        label: (item) => item.parsed.x + '% favorable'}}},
+    scales: {x: {min: 0, max: 100, title: {display: true, text: '% favorable'}},
+             y: {ticks: {font: {size: 10.5}}}}}});
 
 // Tabla de estatus
 const porEst = {};
