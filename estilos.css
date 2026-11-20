@@ -11,7 +11,8 @@ main{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
 h1{color:var(--azul);font-size:26px;margin:8px 0 4px}
 h2{color:var(--azul);font-size:19px;margin:22px 0 8px}
 p.lead{color:var(--gris);max-width:760px;line-height:1.5}
-.hero{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.hero{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;flex-direction:column}
+.hero img.banner{width:100%;max-height:320px;object-fit:cover;border-radius:12px;box-shadow:0 2px 10px rgba(3,42,96,.25)}
 .hero img{width:104px;border-radius:10px;box-shadow:0 2px 10px rgba(3,42,96,.25)}
 .grados{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
 .grado-card{background:#fff;border:1px solid var(--borde);border-top:5px solid var(--celeste);border-radius:10px;padding:12px 14px}
