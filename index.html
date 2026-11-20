@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sociogramas de Preparatoria — Instituto Juventud</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header>
+  <div class="inst">INSTITUTO JUVENTUD DEL ESTADO DE MÉXICO</div>
+  <div class="sub">Departamento de Innovación Educativa · Estudio sociométrico de Preparatoria</div>
+</header>
+<main>
+  <div class="hero">
+    <img src="chema.jpg" alt="Chema, presentador del estudio">
+    <div>
+      <h1>Sociogramas de Preparatoria</h1>
+      <p class="lead">Chema presenta el estudio sociométrico aplicado en noviembre de 2026 a los nueve grupos de
+      Preparatoria: cómo se eligen, cómo se rechazan, cómo perciben el clima de su aula y qué redes de amistad y
+      trabajo sostienen a cada grupo. Elige un grupo para ver su panel dinámico: gráficas, red de amistad
+      interactiva, estatus sociométrico y focos de atención.</p>
+    </div>
+  </div>
+
+  <h2>Panorama por grado</h2>
+  <div class="grados" id="grados"></div>
+
+  <h2>Panel por grupo</h2>
+  <div class="grupos" id="grupos"></div>
+
+  <p class="nota">Los grupos marcados en rojo tienen un índice de clima de aula menor a 50%: son los focos
+  prioritarios de intervención tutorial. Documento de trabajo interno: los datos por alumno deben manejarse
+  con confidencialidad.</p>
+</main>
+<footer>Chema presenta este estudio · Departamento de Innovación Educativa · Instituto Juventud del Estado de México · Noviembre de 2026</footer>
+<script src="datos-web.js"></script>
+<script>
+const S = window.SOCIO;
+const contGrados = document.getElementById('grados');
+for (const [grado, d] of Object.entries(S.grados)) {
+  const div = document.createElement('div');
+  div.className = 'grado-card';
+  div.innerHTML = `<h3>${grado}º grado</h3>
+    <div class="dato">Respuestas: <b>${d.respuestas}</b></div>
+    <div class="dato">Clima promedio: <b>${d.clima_promedio}%</b></div>
+    <div class="dato">Reciprocidad promedio: <b>${d.reciprocidad_promedio}%</b></div>
+    <div class="dato">Cohesión promedio: <b>${d.cohesion_promedio}%</b></div>`;
+  contGrados.appendChild(div);
+}
+const cont = document.getElementById('grupos');
+for (const [g, d] of Object.entries(S.grupos)) {
+  const a = document.createElement('a');
+  a.className = 'btn-grupo' + (d.indice_clima < 50 ? ' alerta' : '');
+  a.href = `panel.html?g=${g}`;
+  a.innerHTML = `${g}<small>Clima ${d.indice_clima}% · ${d.respondientes_unicos} alumnos</small>`;
+  cont.appendChild(a);
+}
+</script>
+</body>
+</html>

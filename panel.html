@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel sociométrico por grupo — Instituto Juventud</title>
+<link rel="stylesheet" href="estilos.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <div class="inst">INSTITUTO JUVENTUD DEL ESTADO DE MÉXICO</div>
+  <div class="sub">Departamento de Innovación Educativa · Estudio sociométrico de Preparatoria</div>
+</header>
+<main>
+  <a class="volver" href="index.html">⟵ Todos los grupos</a>
+  <h1 id="titulo">Grupo</h1>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid2">
+    <div class="card"><h3>Distribución de elecciones de amistad recibidas</h3><canvas id="cHist" class="graf"></canvas></div>
+    <div class="card"><h3>Estatus sociométrico</h3><canvas id="cPastel" class="graf"></canvas></div>
+    <div class="card"><h3>Mapa: elecciones positivas vs. negativas</h3><canvas id="cDisp" class="graf"></canvas></div>
+    <div class="card"><h3>Clima de aula por afirmación (% favorable)</h3><canvas id="cClima" class="graf"></canvas></div>
+  </div>
+
+  <h2>Red de amistad (interactiva)</h2>
+  <p class="nota">Pasa el cursor sobre un alumno para ver sus datos; haz clic para resaltar sus vínculos.
+  Verde grueso = elección mutua · verde = elección · rojo punteado = rechazo. El color del círculo es el estatus
+  y su tamaño crece con las elecciones recibidas.</p>
+  <canvas id="red" width="900" height="900"></canvas>
+
+  <h2>Alumnos por estatus</h2>
+  <div class="card"><table id="tEstatus"></table></div>
+
+  <div class="grid2">
+    <div class="card"><h3>Más buscados para trabajar en equipo</h3><table id="tTrabPos"></table></div>
+    <div class="card"><h3>Más evitados para trabajar en equipo</h3><table id="tTrabNeg"></table></div>
+    <div class="card"><h3>Motivos para elegir (amistad y trabajo)</h3><div id="motPos"></div></div>
+    <div class="card"><h3>Motivos de rechazo (amistad y trabajo)</h3><div id="motNeg"></div></div>
+  </div>
+
+  <h2>Lectura rápida</h2>
+  <div class="card"><p id="lectura" style="line-height:1.55;margin:0"></p></div>
+  <p class="nota">Nota: cada alumno nombró a un solo compañero por criterio; «sin elecciones» no equivale por sí solo
+  a aislamiento — se contrasta con la simpatía promedio de la cuadrícula «¿Cómo te cae?». Cuando un alumno se señaló
+  a sí mismo en la pregunta de rechazo, se interpretó como «a nadie».</p>
+</main>
+<footer>Chema presenta este estudio · Departamento de Innovación Educativa · Instituto Juventud del Estado de México · Noviembre de 2026</footer>
+<div id="tip"></div>
+<script src="datos-web.js"></script>
+<script>
+const g = new URLSearchParams(location.search).get('g') || '4A';
+const d = window.SOCIO.grupos[g];
+const COL = {Popular:'#009944', Promedio:'#00A8FF', Controvertido:'#F08C00', Ignorado:'#8A93A6', Rechazado:'#D64545'};
+document.getElementById('titulo').textContent = `Grupo ${g} de Preparatoria — Panel sociométrico`;
+const sinEleccion = d.alumnos.filter(a => a.pos === 0).length;
+const part = Math.round(d.respondientes_unicos / d.roster * 100);
+document.getElementById('kpis').innerHTML = [
+  [d.respondientes_unicos + '/' + d.roster, `participación (${part}%)`],
+  [d.indice_clima + '%', 'índice de clima favorable'],
+  [d.pares_mutuos, 'parejas con elección mutua'],
+  [d.reciprocidad_pct + '%', 'reciprocidad'],
+  [sinEleccion, 'alumnos sin elecciones'],
+].map(([n, l]) => `<div class="kpi"><div class="num">${n}</div><div class="lab">${l}</div></div>`).join('');
+
+// Histograma
+const maxPos = Math.max(...d.alumnos.map(a => a.pos));
+const bins = Array.from({length: maxPos + 1}, (_, i) => d.alumnos.filter(a => a.pos === i).length);
+new Chart(document.getElementById('cHist'), {type: 'bar',
+  data: {labels: bins.map((_, i) => i), datasets: [{data: bins, backgroundColor: '#00A8FF', borderColor: '#032A60'}]},
+  options: {plugins: {legend: {display: false}}, scales: {x: {title: {display: true, text: 'Elecciones recibidas'}}, y: {title: {display: true, text: 'Alumnos'}, ticks: {stepSize: 1}}}}});
+
+// Pastel de estatus
+const ordenEst = ['Popular', 'Promedio', 'Controvertido', 'Ignorado', 'Rechazado'].filter(e => d.conteo_estatus[e]);
+new Chart(document.getElementById('cPastel'), {type: 'pie',
+  data: {labels: ordenEst, datasets: [{data: ordenEst.map(e => d.conteo_estatus[e]), backgroundColor: ordenEst.map(e => COL[e])}]},
+  options: {plugins: {legend: {position: 'bottom'}}}});
+
+// Dispersión
+new Chart(document.getElementById('cDisp'), {type: 'scatter',
+  data: {datasets: Object.keys(COL).map(est => ({label: est, backgroundColor: COL[est],
+    data: d.alumnos.filter(a => a.estatus === est).map(a => ({x: a.pos, y: a.neg, n: a.nombre_bonito})),
+    pointRadius: 6}))},
+  options: {plugins: {tooltip: {callbacks: {label: c => `${c.raw.n}: +${c.raw.x} / −${c.raw.y}`}}},
+    scales: {x: {title: {display: true, text: 'Elecciones positivas'}, ticks: {stepSize: 1}},
+             y: {title: {display: true, text: 'Elecciones negativas'}, ticks: {stepSize: 1}}}}});
+
+// Clima
+new Chart(document.getElementById('cClima'), {type: 'bar',
+  data: {labels: d.clima.map(c => c.etiqueta),
+    datasets: [{data: d.clima.map(c => c.favorable),
+      backgroundColor: d.clima.map(c => c.clave === 'divisiones' ? '#D64545' : '#00A8FF')}]},
+  options: {indexAxis: 'y', plugins: {legend: {display: false}},
+    scales: {x: {min: 0, max: 100, title: {display: true, text: '% favorable'}}}}});
+
+// Tabla de estatus
+const porEst = {};
+d.alumnos.forEach(a => (porEst[a.estatus] = porEst[a.estatus] || []).push(a));
+document.getElementById('tEstatus').innerHTML =
+  '<tr><th>Estatus</th><th>Alumno</th><th>+</th><th>−</th><th>Simpatía</th></tr>' +
+  ['Popular', 'Promedio', 'Controvertido', 'Ignorado', 'Rechazado'].flatMap(est =>
+    (porEst[est] || []).map(a =>
+      `<tr><td><span class="tag ${est}">${est}</span></td><td>${a.nombre_bonito}</td><td>${a.pos}</td><td>${a.neg}</td><td>${a.simpatia ?? '—'}</td></tr>`)).join('');
+
+const top = (campo, n = 6) => [...d.alumnos].sort((x, y) => y[campo] - x[campo]).filter(a => a[campo] > 0).slice(0, n);
+const tablaTop = (campo) => '<tr><th>Alumno</th><th>Elecciones</th></tr>' +
+  top(campo).map(a => `<tr><td>${a.nombre_bonito}</td><td>${a[campo]}</td></tr>`).join('');
+document.getElementById('tTrabPos').innerHTML = tablaTop('tpos');
+document.getElementById('tTrabNeg').innerHTML = tablaTop('tneg');
+
+const motivosHTML = (claves) => claves.map(([k, t]) => {
+  const top3 = (d.motivos[k] || []).slice(0, 3);
+  return top3.length ? `<p style="margin:6px 0 2px"><b>${t}</b></p>` +
+    top3.map(([m, n]) => `<div style="font-size:13px">• ${m} — ${n}</div>`).join('') : '';
+}).join('');
+document.getElementById('motPos').innerHTML = motivosHTML([['amigo_pos', 'Para elegir a un amigo'], ['trab_pos', 'Para elegir compañero de trabajo']]);
+document.getElementById('motNeg').innerHTML = motivosHTML([['amigo_neg', 'Para rechazar en la amistad'], ['trab_neg', 'Para evitar en el trabajo']]);
+
+// Lectura rápida
+const topAmigo = top('pos', 1)[0];
+const climaTxt = d.indice_clima >= 80 ? 'muy favorable' : d.indice_clima >= 65 ? 'favorable' :
+  d.indice_clima >= 50 ? 'intermedio, con focos de tensión' : 'crítico';
+document.getElementById('lectura').innerHTML =
+  `El clima de aula del grupo es <b>${climaTxt}</b> (${d.indice_clima}% de respuestas favorables). ` +
+  `La reciprocidad es de <b>${d.reciprocidad_pct}%</b> con ${d.pares_mutuos} parejas mutuas: las elecciones ` +
+  `se concentran en pocos referentes${topAmigo ? ` — el más elegido es <b>${topAmigo.nombre_bonito}</b> (${topAmigo.pos})` : ''}. ` +
+  `Hay <b>${(porEst['Rechazado'] || []).length} alumnos en estatus de rechazado</b> y ` +
+  `<b>${(porEst['Ignorado'] || []).length} ignorados</b>: son los focos de atención para tutoría. ` +
+  `El informe completo en PDF está en la carpeta de Drive «Sociogramas Preparatoria 2026».`;
+
+// Red interactiva
+const cv = document.getElementById('red'), ctx = cv.getContext('2d'), tip = document.getElementById('tip');
+const W = cv.width, H = cv.height, cx = W / 2, cy = H / 2, RAD = W * 0.40;
+const orden = [...d.alumnos].sort((a, b) => b.pos - a.pos);
+const posNodo = {};
+orden.forEach((a, i) => {
+  const ang = 2 * Math.PI * i / orden.length - Math.PI / 2;
+  posNodo[a.nombre] = {x: cx + RAD * Math.cos(ang), y: cy + RAD * Math.sin(ang), a};
+});
+const setPos = new Set(d.aristas_pos.map(([x, y]) => x + '>' + y));
+let seleccionado = null, hover = null;
+function dibujar() {
+  ctx.clearRect(0, 0, W, H);
+  const activa = (x, y) => !seleccionado || x === seleccionado || y === seleccionado;
+  ctx.lineWidth = 1;
+  for (const [x, y] of d.aristas_neg) {
+    if (!posNodo[x] || !posNodo[y] || !activa(x, y)) continue;
+    ctx.strokeStyle = 'rgba(214,69,69,.45)'; ctx.setLineDash([4, 4]);
+    linea(posNodo[x], posNodo[y]); ctx.setLineDash([]);
+  }
+  for (const [x, y] of d.aristas_pos) {
+    if (!posNodo[x] || !posNodo[y] || !activa(x, y)) continue;
+    const mutuo = setPos.has(y + '>' + x);
+    ctx.strokeStyle = mutuo ? 'rgba(0,153,68,.9)' : 'rgba(90,140,90,.5)';
+    ctx.lineWidth = mutuo ? 2.4 : 1.1;
+    linea(posNodo[x], posNodo[y]);
+  }
+  ctx.lineWidth = 1;
+  for (const a of orden) {
+    const p = posNodo[a.nombre], r = 9 + 3.2 * a.pos;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7);
+    ctx.fillStyle = COL[a.estatus]; ctx.fill();
+    ctx.strokeStyle = '#032A60'; ctx.stroke();
+    ctx.fillStyle = '#032A60'; ctx.font = '10px Segoe UI, Arial';
+    ctx.textAlign = p.x >= cx ? 'left' : 'right';
+    const nombre = a.nombre_bonito.split(' ').slice(0, 2).join(' ');
+    ctx.fillText(nombre, p.x + (p.x >= cx ? r + 3 : -r - 3), p.y + 3);
+  }
+}
+function linea(p, q) {
+  ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+  const ang = Math.atan2(q.y - p.y, q.x - p.x), d2 = Math.hypot(q.x - p.x, q.y - p.y);
+  const ax = p.x + (d2 - 14) * Math.cos(ang), ay = p.y + (d2 - 14) * Math.sin(ang);
+  ctx.beginPath(); ctx.moveTo(ax, ay);
+  ctx.lineTo(ax - 6 * Math.cos(ang - .45), ay - 6 * Math.sin(ang - .45));
+  ctx.lineTo(ax - 6 * Math.cos(ang + .45), ay - 6 * Math.sin(ang + .45));
+  ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+}
+function nodoEn(mx, my) {
+  const r = cv.getBoundingClientRect();
+  const x = (mx - r.left) * W / r.width, y = (my - r.top) * H / r.height;
+  return orden.find(a => Math.hypot(posNodo[a.nombre].x - x, posNodo[a.nombre].y - y) < 12 + 3.2 * a.pos) || null;
+}
+cv.addEventListener('mousemove', e => {
+  const n = nodoEn(e.clientX, e.clientY);
+  hover = n;
+  if (n) {
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 10) + 'px';
+    tip.innerHTML = `<b>${n.nombre_bonito}</b><br>Estatus: ${n.estatus}<br>Elecciones +${n.pos} / −${n.neg}<br>Simpatía: ${n.simpatia ?? '—'}`;
+  } else tip.style.display = 'none';
+});
+cv.addEventListener('click', e => {
+  const n = nodoEn(e.clientX, e.clientY);
+  seleccionado = n ? (seleccionado === n.nombre ? null : n.nombre) : null;
+  dibujar();
+});
+dibujar();
+</script>
+</body>
+</html>
