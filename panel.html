@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel sociométrico por grupo — Instituto Juventud</title>
 <link rel="stylesheet" href="estilos.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="chart.min.js"></script>
 </head>
 <body>
 <header>
@@ -103,9 +103,9 @@ document.getElementById('tEstatus').innerHTML =
     (porEst[est] || []).map(a =>
       `<tr><td><span class="tag ${est}">${est}</span></td><td>${a.nombre_bonito}</td><td>${a.pos}</td><td>${a.neg}</td><td>${a.simpatia ?? '—'}</td></tr>`)).join('');
 
-const top = (campo, n = 6) => [...d.alumnos].sort((x, y) => y[campo] - x[campo]).filter(a => a[campo] > 0).slice(0, n);
+const topDe = (campo, n = 6) => [...d.alumnos].sort((x, y) => y[campo] - x[campo]).filter(a => a[campo] > 0).slice(0, n);
 const tablaTop = (campo) => '<tr><th>Alumno</th><th>Elecciones</th></tr>' +
-  top(campo).map(a => `<tr><td>${a.nombre_bonito}</td><td>${a[campo]}</td></tr>`).join('');
+  topDe(campo).map(a => `<tr><td>${a.nombre_bonito}</td><td>${a[campo]}</td></tr>`).join('');
 document.getElementById('tTrabPos').innerHTML = tablaTop('tpos');
 document.getElementById('tTrabNeg').innerHTML = tablaTop('tneg');
 
@@ -118,7 +118,7 @@ document.getElementById('motPos').innerHTML = motivosHTML([['amigo_pos', 'Para e
 document.getElementById('motNeg').innerHTML = motivosHTML([['amigo_neg', 'Para rechazar en la amistad'], ['trab_neg', 'Para evitar en el trabajo']]);
 
 // Lectura rápida
-const topAmigo = top('pos', 1)[0];
+const topAmigo = topDe('pos', 1)[0];
 const climaTxt = d.indice_clima >= 80 ? 'muy favorable' : d.indice_clima >= 65 ? 'favorable' :
   d.indice_clima >= 50 ? 'intermedio, con focos de tensión' : 'crítico';
 document.getElementById('lectura').innerHTML =
